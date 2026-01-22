@@ -1,67 +1,70 @@
 package com.example;
 
-import java.io.StringBufferInputStream;
-import java.util.Date;
-import java.util.Hashtable;
-import java.util.Vector;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 public class LegacyExample {
 
-    // finalize(): Deprecated em Java 9 e removida em Java 18+
-    @Override
-    protected void finalize() throws Throwable {
-        System.out.println("Finalizing object...");
-        super.finalize();
-    }
+    // O método finalize() foi removido por ser obsoleto e inseguro.
+    // A limpeza de recursos deve ser feita com try-with-resources ou outros mecanismos.
 
     public static void main(String[] args) {
 
-        // APIs antigas e problemáticas:
+        // 1. Uso da nova API de Data/Hora (java.time)
+        var now = LocalDate.now();
+        var year = now.getYear();
+        var month = now.getMonthValue();
+        var day = now.getDayOfMonth();
 
-        // 1. Date.getYear(), getMonth(), getDay() — Deprecated
-        Date date = new Date();
-        int year = date.getYear();     // <--- OpenRewrite converte para LocalDate
-        int month = date.getMonth();
-        int day = date.getDay();
+        System.out.println("Date (API moderna): " + year + "-" + month + "-" + day);
 
-        System.out.println("Date (deprecated methods): " + year + "-" + month + "-" + day);
-
-        // 2. StringBufferInputStream — Removida em Java 11+
-        StringBufferInputStream input =
-                new StringBufferInputStream("Texto de teste"); // <--- OpenRewrite troca para InputStream moderno
-
-        try {
+        // 2. Substituição de StringBufferInputStream por ByteArrayInputStream com codificação definida
+        try (var input = new ByteArrayInputStream("Texto de teste".getBytes(StandardCharsets.UTF_8))) {
             int data = input.read();
             while (data != -1) {
                 System.out.print((char) data);
                 data = input.read();
             }
+            System.out.println(); // Adiciona uma nova linha para formatação
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        // 3. Thread.stop() — Removido e inseguro
-        Thread t = new Thread(() -> {
-            while (true) {
+        // 3. Uso de interrupt() para sinalizar o encerramento de uma Thread
+        var t = new Thread(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
                 System.out.println("Running thread...");
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
+                    // Restaura o status de interrupção e encerra o loop
+                    Thread.currentThread().interrupt();
                     break;
                 }
             }
+            System.out.println("Thread finished.");
         });
 
         t.start();
-        t.stop(); // <--- OpenRewrite converte para interrupt()
+        try {
+            // Aguarda um pouco antes de interromper
+            Thread.sleep(1500);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        t.interrupt(); // Forma correta de solicitar a parada da thread
 
-        // 4. Hashtable e Vector — Substituídos por HashMap e ArrayList
-        Hashtable<String, String> table = new Hashtable<>();
-        table.put("key", "value"); // <--- OpenRewrite migra para HashMap
+        // 4. Uso de coleções modernas da Java Collections Framework
+        var table = new HashMap<String, String>();
+        table.put("key", "value");
 
-        Vector<String> list = new Vector<>();
-        list.add("item"); // <--- OpenRewrite migra para ArrayList
+        var list = new ArrayList<String>();
+        list.add("item");
 
-        System.out.println("Legacy structures used.");
+        System.out.println("Estruturas de dados modernas utilizadas.");
     }
 }
